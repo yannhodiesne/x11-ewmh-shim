@@ -2,6 +2,13 @@
 
 A tiny shim I developed to make Dofus 3 work under xwayland-sattelite. No need to thank me, Ankama.
 
+Fixes this error when launching the game:
+```
+Task dozt completed.
+Task dozu completed.
+Error: Exception has been thrown by the target of an invocation.
+```
+
 ## Usage
 
 ### NixOS, with home-manager

@@ -25,7 +25,7 @@
               src = ./.;
               filter = path: type: baseNameOf path != "target" && pkgs.lib.cleanSourceFilter path type;
             };
-          cargoHash = "sha256-o86mPV3KMOtmoaz1q2NY3hcO+ENvb/FPdmVIZkbdfgw=";
+          cargoHash = "sha256-MD+ilRw531NjyY2D6dlxcX7WyPMdpIPg6TiQJylBBqY=";
         };
     in
     {
