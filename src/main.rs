@@ -3,7 +3,7 @@ use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{Atom, AtomEnum, ConnectionExt, MapState, PropMode, Window};
 use x11rb::wrapper::ConnectionExt as _;
 
-const POLL_MS: u64 = 300;
+const POLL_MS: u64 = 100;
 const MAX_CLIENTS: usize = 64;
 
 fn is_client<C: Connection>(conn: &C, win: Window, pid: Atom) -> bool {
