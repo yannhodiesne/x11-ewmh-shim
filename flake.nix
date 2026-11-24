@@ -14,17 +14,18 @@
 
       shim =
         system:
-        (nixpkgs.legacyPackages.${system}).rustPlatform.buildRustPackage {
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        pkgs.rustPlatform.buildRustPackage {
           pname = "x11-ewmh-shim";
           version = "0.1.0";
-          src =
-            let
-              pkgs = nixpkgs.legacyPackages.${system};
-            in
-            pkgs.lib.cleanSourceWith {
-              src = ./.;
-              filter = path: type: baseNameOf path != "target" && pkgs.lib.cleanSourceFilter path type;
-            };
+          # the tests needs Xvfb
+          nativeBuildInputs = [ pkgs.xvfb ];
+          src = pkgs.lib.cleanSourceWith {
+            src = ./.;
+            filter = path: type: baseNameOf path != "target" && pkgs.lib.cleanSourceFilter path type;
+          };
           cargoHash = "sha256-MD+ilRw531NjyY2D6dlxcX7WyPMdpIPg6TiQJylBBqY=";
         };
     in

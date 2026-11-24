@@ -38,12 +38,13 @@ fn scan<C: Connection>(conn: &C, win: Window, depth: u8, pid: Atom, out: &mut Ve
         return;
     };
     for child in tree.children {
+        if out.len() >= MAX_CLIENTS {
+            return;
+        }
         if is_client(conn, child, pid) {
             out.push(child);
         }
-        if out.len() < MAX_CLIENTS {
-            scan(conn, child, depth + 1, pid, out);
-        }
+        scan(conn, child, depth + 1, pid, out);
     }
 }
 
@@ -103,8 +104,29 @@ fn publish<C: Connection>(
     Ok(())
 }
 
+fn republish_on(event: &Event, root: Window) -> bool {
+    match event {
+        Event::CreateNotify(_)
+        | Event::DestroyNotify(_)
+        | Event::MapNotify(_)
+        | Event::UnmapNotify(_)
+        | Event::ReparentNotify(_)
+        | Event::ConfigureNotify(_) => true,
+        // PropertyNotify reaches us only for windows where watch() selected PropertyChangeMask,
+        // i.e. a client setting _NET_WM_PID after it mapped. The Xlib docs claim a root
+        // SubstructureNotify also reports the root's own properties (Xorg does not); ignoring
+        // those keeps the loop from publishing on its own writes.
+        Event::PropertyNotify(event) => event.window != root,
+        _ => false,
+    }
+}
+
 fn run() -> Result<(), Box<dyn Error>> {
     let (conn, screen) = x11rb::connect(None)?;
+    run_on(&conn, screen)
+}
+
+fn run_on<C: Connection>(conn: &C, screen: usize) -> Result<(), Box<dyn Error>> {
     let root = conn.setup().roots[screen].root;
     let pid = intern(&conn, "_NET_WM_PID")?;
     let workarea = intern(&conn, "_NET_WORKAREA")?;
@@ -124,23 +146,12 @@ fn run() -> Result<(), Box<dyn Error>> {
     publish(&conn, root, pid, workarea, client_lists)?;
 
     loop {
-        let changed = match conn.wait_for_event()? {
-            Event::CreateNotify(event) => {
-                watch(&conn, event.window);
-                true
-            }
-            // SubstructureNotify on the root echoes our own root writes back as PropertyNotify,
-            // so only a child's property change (e.g. a late _NET_WM_PID) counts.
-            Event::PropertyNotify(event) => event.window != root,
-            Event::DestroyNotify(_)
-            | Event::MapNotify(_)
-            | Event::UnmapNotify(_)
-            | Event::ReparentNotify(_)
-            | Event::ConfigureNotify(_) => true,
-            _ => false,
-        };
-        if changed {
-            publish(&conn, root, pid, workarea, client_lists)?;
+        let event = conn.wait_for_event()?;
+        if let Event::CreateNotify(event) = &event {
+            watch(conn, event.window);
+        }
+        if republish_on(&event, root) {
+            publish(conn, root, pid, workarea, client_lists)?;
         }
     }
 }
@@ -154,3 +165,6 @@ fn main() {
         std::thread::sleep(Duration::from_secs(RETRY_SECS));
     }
 }
+
+#[cfg(test)]
+mod tests;

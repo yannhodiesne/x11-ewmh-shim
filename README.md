@@ -56,3 +56,11 @@ Then run:
 ```sh
 systemctl --user enable --now x11-ewmh-shim.service
 ```
+
+## Development
+
+```sh
+cargo test
+```
+
+The tests needs `Xvfb`, ensure it is on `PATH`
